@@ -55,6 +55,9 @@ const KEY = "939fefbc";
 export default function App() {
   const [movies, setMovies] = useState([]);
   const [watched, setWatched] = useState(tempWatchedData);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState("");
+  const query = "interstellar";
 
   // useEffect(function () {
   //   fetch(`https://www.omdbapi.com/?apikey=939fefbc&s=interstellar`)
@@ -63,16 +66,34 @@ export default function App() {
   // }, []);
 
   //Lebih baik pake async...await untuk fetching API
-  useEffect(
-    function() {
-      async function fetchMovie() {
-        const res = await fetch(`https://www.omdbapi.com/?apikey=939fefbc&s=interstellar`);
+  useEffect(function () {
+    async function fetchMovie() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(
+          `https://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+        );
+
+        if(!res.ok) {
+          throw new Error("Something went wrong...");
+        }
+
         const data = await res.json();
+        if(data.Response === "False") {
+          throw new Error("Movie not Found");
+        }
+
         setMovies(data.Search);
+        
+      } catch (error) {
+        console.error(error.message);
+        setIsError(error.message);
+      } finally {
+        setIsLoading(false);
       }
-      fetchMovie();
     }
-  , []);
+    fetchMovie();
+  }, []);
 
   return (
     <>
@@ -83,7 +104,9 @@ export default function App() {
 
       <Main>
         <Box>
-          <MoviesList movies={movies} />
+          {isLoading && <Loader />}
+          {!isLoading && !isError &&  <MoviesList movies={movies} />}
+          {isError && <ErrorMessage>{isError}</ErrorMessage>}
         </Box>
 
         <Box>
@@ -95,8 +118,17 @@ export default function App() {
   );
 }
 
-// Navigation Bar
+//Loader
+function Loader() {
+  return <p className="loader">Loading...</p>;
+}
 
+//Error message
+function ErrorMessage({children}) {
+  return <p className="error">{children}</p>
+}
+
+// Navigation Bar
 function Navbar({ children }) {
   return (
     <nav className="nav-bar">
