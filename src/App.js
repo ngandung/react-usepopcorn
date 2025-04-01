@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import StarRating from "./StarRating"
 
 // const tempMovieData = [
 //   {
@@ -58,6 +59,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState("");
   const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
 
   // useEffect(function () {
   //   fetch(`https://www.omdbapi.com/?apikey=939fefbc&s=interstellar`)
@@ -65,45 +67,54 @@ export default function App() {
   //     .then((data) => setMovies(data.Search));
   // }, []);
 
+  function handleSelectedId(id) {
+    setSelectedId((selectedId) => (id === selectedId ? null : id));
+  }
+
+  function handleCloseMovie() {
+    setSelectedId(null);
+  }
+
   //Lebih baik pake async...await untuk fetching API
-  useEffect(function () {
-    if(query.length < 3){
-      setMovies([]);
-      setIsError("");
-      return;
-    } 
-
-    async function fetchMovie() {
-      try {
-        setIsLoading(true);
-        //always empty error before fetching data
+  useEffect(
+    function () {
+      if (query.length < 3) {
+        setMovies([]);
         setIsError("");
-
-        const res = await fetch(
-          `https://www.omdbapi.com/?apikey=${KEY}&s=${query}`
-        );
-
-        if(!res.ok) {
-          throw new Error("Something went wrong...");
-        }
-
-        const data = await res.json();
-        if(data.Response === "False") {
-          throw new Error("Movie not Found");
-        }
-
-        setMovies(data.Search);
-        
-      } catch (error) {
-        console.error(error.message);
-        setIsError(error.message);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    }
-    fetchMovie();
-    
-  }, [query]);
+
+      async function fetchMovie() {
+        try {
+          setIsLoading(true);
+          //always empty error before fetching data
+          setIsError("");
+
+          const res = await fetch(
+            `https://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+          );
+
+          if (!res.ok) {
+            throw new Error("Something went wrong...");
+          }
+
+          const data = await res.json();
+          if (data.Response === "False") {
+            throw new Error("Movie not Found");
+          }
+
+          setMovies(data.Search);
+        } catch (error) {
+          console.error(error.message);
+          setIsError(error.message);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+      fetchMovie();
+    },
+    [query]
+  );
 
   return (
     <>
@@ -115,13 +126,24 @@ export default function App() {
       <Main>
         <Box>
           {isLoading && <Loader />}
-          {!isLoading && !isError &&  <MoviesList movies={movies} />}
+          {!isLoading && !isError && (
+            <MoviesList onSelectedId={handleSelectedId} movies={movies} />
+          )}
           {isError && <ErrorMessage>{isError}</ErrorMessage>}
         </Box>
 
         <Box>
-          <WatchedSummary watched={watched} />
-          <WatchedList watched={watched} />
+          {selectedId ? (
+            <MovieDetail
+              selectedId={selectedId}
+              onCloseMovie={handleCloseMovie}
+            />
+          ) : (
+            <>
+              <WatchedSummary watched={watched} />
+              <WatchedList watched={watched} />
+            </>
+          )}
         </Box>
       </Main>
     </>
@@ -134,8 +156,8 @@ function Loader() {
 }
 
 //Error message
-function ErrorMessage({children}) {
-  return <p className="error">{children}</p>
+function ErrorMessage({ children }) {
+  return <p className="error">{children}</p>;
 }
 
 // Navigation Bar
@@ -157,7 +179,7 @@ function Logo() {
   );
 }
 
-function Searchbar({query, setQuery}) {
+function Searchbar({ query, setQuery }) {
   return (
     <input
       className="search"
@@ -197,19 +219,23 @@ function Main({ children }) {
 }
 
 //Main - Movie List Section
-function MoviesList({ movies }) {
+function MoviesList({ movies, onSelectedId }) {
   return (
-    <ul className="list">
+    <ul className="list list-movies">
       {movies?.map((movie) => (
-        <MovieCard movie={movie} key={movie.imdbID} />
+        <MovieCard
+          movie={movie}
+          key={movie.imdbID}
+          onSelectedId={onSelectedId}
+        />
       ))}
     </ul>
   );
 }
 
-function MovieCard({ movie }) {
+function MovieCard({ movie, onSelectedId }) {
   return (
-    <li>
+    <li onClick={() => onSelectedId(movie.imdbID)}>
       <img src={movie.Poster} alt={`${movie.Title} poster`} />
       <h3>{movie.Title}</h3>
       <div>
@@ -219,6 +245,83 @@ function MovieCard({ movie }) {
         </p>
       </div>
     </li>
+  );
+}
+
+//Main - Movie Detail
+function MovieDetail({ selectedId, onCloseMovie }) {
+  const [movieDetail, setMovieDetail] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  //Deconstraction
+  const {
+    Title: title,
+    Poster: poster,
+    Runtime: runtime,
+    imdbRating,
+    Plot: plot,
+    Released: released,
+    Actors: actors,
+    Director: director,
+    Genre: genre,
+  } = movieDetail;
+
+  useEffect(function () {
+    if (!selectedId) return; // Prevents unnecessary API calls
+    
+    async function fetchMovieDetail() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(
+          `https://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
+        );
+        const data = await res.json();
+        setMovieDetail(data);
+      } 
+      catch (err) {
+        console.log(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchMovieDetail();
+  }, [selectedId]);
+
+  return (
+    <div className="details">
+      {isLoading ? (
+        <Loader />
+      ) : (
+        <>
+          <header>
+            <button className="btn-back" onClick={onCloseMovie}>
+              &larr;
+            </button>
+            <img src={poster} alt={`Poster of ${title || "Unknown"} movie`} />
+            <div className="details-overview">
+              <h2>{title || "Unknown"}</h2>
+              <p>
+                {released || "Unknown"} &bull; {runtime || "Unknown"}
+              </p>
+              <p>{genre || "Unknown"}</p>
+              <p>
+                <span>⭐</span>
+                {imdbRating  || "N/A"}
+              </p>
+            </div>
+          </header>
+
+          <section>
+            <div className="rating">
+              <StarRating size={"24px"} maxStar={10} />
+            </div>
+            <em>{plot}</em>
+            <p>Starring {actors}</p>
+            <p>Directed by {director}</p>
+          </section>
+        </>
+      )}
+    </div>
   );
 }
 
