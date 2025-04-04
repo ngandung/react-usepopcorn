@@ -97,6 +97,8 @@ export default function App() {
   //Lebih baik pake async...await untuk fetching API
   useEffect(
     function () {
+      const controller = new AbortController();
+
       if (query.length < 3) {
         setMovies([]);
         setIsError("");
@@ -110,7 +112,8 @@ export default function App() {
           setIsError("");
 
           const res = await fetch(
-            `https://www.omdbapi.com/?apikey=${KEY}&s=${query}`
+            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
+            { signal: controller.signal }
           );
 
           if (!res.ok) {
@@ -123,14 +126,22 @@ export default function App() {
           }
 
           setMovies(data.Search);
+          setIsError("");
         } catch (error) {
-          console.error(error.message);
-          setIsError(error.message);
+          if (error.name !== "AbortError") {
+            setIsError(error.message);
+          }
         } finally {
           setIsLoading(false);
         }
       }
+
+      handleCloseMovie();
       fetchMovie();
+
+      return function () {
+        controller.abort();
+      };
     },
     [query]
   );
@@ -312,7 +323,7 @@ function MovieDetail({ selectedId, onCloseMovie, onSetWatched, isListed }) {
         try {
           setIsLoading(true);
           const res = await fetch(
-            `https://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
+            `http://www.omdbapi.com/?apikey=${KEY}&i=${selectedId}`
           );
           const data = await res.json();
           setMovieDetail(data);
@@ -340,6 +351,22 @@ function MovieDetail({ selectedId, onCloseMovie, onSetWatched, isListed }) {
     },
     [title]
   );
+
+  //Close movie detail when click ESC button on keyboard
+  useEffect(function () {
+    function callback(e) {
+      if (e.code === "Escape") {
+        onCloseMovie();
+        console.log("escape");
+      }
+    }
+
+    document.addEventListener("keydown", callback);
+
+    return function () {
+      document.removeEventListener("keydown", callback);
+    };
+  }, [onCloseMovie]);
 
   return (
     <div className="details">
