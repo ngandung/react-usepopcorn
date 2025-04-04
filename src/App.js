@@ -91,7 +91,7 @@ export default function App() {
   }
 
   function handleDeletedWatched(id) {
-    setWatched(watched => watched.filter(movie => movie.imdbID !== id));
+    setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
   //Lebih baik pake async...await untuk fetching API
@@ -162,7 +162,10 @@ export default function App() {
           ) : (
             <>
               <WatchedSummary watched={watched} />
-              <WatchedList watched={watched} onDeleteWatched={handleDeletedWatched} />
+              <WatchedList
+                watched={watched}
+                onDeleteWatched={handleDeletedWatched}
+              />
             </>
           )}
         </Box>
@@ -324,6 +327,20 @@ function MovieDetail({ selectedId, onCloseMovie, onSetWatched, isListed }) {
     [selectedId]
   );
 
+  //Ganti title di tabs browser
+  useEffect(
+    function () {
+      if (!title) return;
+      document.title = `Movie | ${title}`;
+
+      //clean up effect when the component unmounted
+      return function () {
+        document.title = "usePopcorn";
+      };
+    },
+    [title]
+  );
+
   return (
     <div className="details">
       {isLoading ? (
@@ -436,7 +453,11 @@ function WatchedList({ watched, onDeleteWatched }) {
   return (
     <ul className="list">
       {watched.map((movie) => (
-        <WatchedCard movie={movie} key={movie.imdbID} onDeleteWatched={onDeleteWatched} />
+        <WatchedCard
+          movie={movie}
+          key={movie.imdbID}
+          onDeleteWatched={onDeleteWatched}
+        />
       ))}
     </ul>
   );
@@ -461,7 +482,12 @@ function WatchedCard({ movie, onDeleteWatched }) {
           <span>{movie.runtime} min</span>
         </p>
 
-        <button className="btn-delete" onClick={() => onDeleteWatched(movie.imdbID)} >X</button>
+        <button
+          className="btn-delete"
+          onClick={() => onDeleteWatched(movie.imdbID)}
+        >
+          X
+        </button>
       </div>
     </li>
   );
