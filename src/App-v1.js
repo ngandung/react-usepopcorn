@@ -55,17 +55,12 @@ const KEY = "939fefbc";
 
 export default function App() {
   const [movies, setMovies] = useState([]);
+  const [watched, setWatched] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState("");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [isListed, setIsListed] = useState({ listed: false, movieRating: 0 });
-  const [watched, setWatched] = useState(function () {
-    const localData = localStorage.getItem("watched");
-
-    //JSON.parse digunakan untuk mengembalikan format data dari string ke format semula
-    return JSON.parse(localData);
-  });
 
   // useEffect(function () {
   //   fetch(`https://www.omdbapi.com/?apikey=939fefbc&s=interstellar`)
@@ -98,16 +93,6 @@ export default function App() {
   function handleDeletedWatched(id) {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
-
-  //Save watched list to browser storage
-  useEffect(
-    function () {
-      //local storage hanya menyimpan data dalam bentuk string, jadi perlu di JSON.stringify dulu
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-
-    [watched]
-  );
 
   //Lebih baik pake async...await untuk fetching API
   useEffect(
@@ -368,23 +353,20 @@ function MovieDetail({ selectedId, onCloseMovie, onSetWatched, isListed }) {
   );
 
   //Close movie detail when click ESC button on keyboard
-  useEffect(
-    function () {
-      function callback(e) {
-        if (e.code === "Escape") {
-          onCloseMovie();
-          console.log("escape");
-        }
+  useEffect(function () {
+    function callback(e) {
+      if (e.code === "Escape") {
+        onCloseMovie();
+        console.log("escape");
       }
+    }
 
-      document.addEventListener("keydown", callback);
+    document.addEventListener("keydown", callback);
 
-      return function () {
-        document.removeEventListener("keydown", callback);
-      };
-    },
-    [onCloseMovie]
-  );
+    return function () {
+      document.removeEventListener("keydown", callback);
+    };
+  }, [onCloseMovie]);
 
   return (
     <div className="details">
